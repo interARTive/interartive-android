@@ -9,7 +9,6 @@ import com.github.zakaprov.interartive.domain.ArCoreSessionListener
 import com.github.zakaprov.interartive.utils.DisplayRotationHelper
 import com.github.zakaprov.interartive.utils.SurfaceTapHelper
 import com.google.ar.core.AugmentedImage
-import com.google.ar.core.Plane
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import java.io.IOException
@@ -26,7 +25,6 @@ class MainRenderer(
 
     private val backgroundRenderer = BackgroundRenderer()
     private val pointCloudRenderer = PointCloudRenderer()
-    private val planeRenderer = PlaneRenderer()
     private val objectRenderer = ObjectRenderer()
 
     private val anchorMatrix = FloatArray(16)
@@ -36,7 +34,6 @@ class MainRenderer(
 
         try {
             backgroundRenderer.createOnGlThread(context)
-            planeRenderer.createOnGlThread(context, "models/trigrid.png")
             pointCloudRenderer.createOnGlThread(context)
 
             objectRenderer.createOnGlThread(context, "models/andy.obj", "models/andy.png")
@@ -128,10 +125,6 @@ class MainRenderer(
             // Application is responsible for releasing the point cloud resources after
             // using it.
             pointCloud.release()
-
-            // Visualize planes.
-            planeRenderer.drawPlanes(
-                session.getAllTrackables(Plane::class.java), camera.displayOrientedPose, projmtx)
 
             for (image in images) {
                 if (image.trackingState == TrackingState.TRACKING) {
