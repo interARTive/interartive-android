@@ -28,7 +28,6 @@ class MainRenderer(
     private val pointCloudRenderer = PointCloudRenderer()
     private val planeRenderer = PlaneRenderer()
     private val virtualObject = ObjectRenderer()
-    private val virtualObjectShadow = ObjectRenderer()
 
     private val anchorMatrix = FloatArray(16)
 
@@ -42,11 +41,6 @@ class MainRenderer(
 
             virtualObject.createOnGlThread(context, "models/andy.obj", "models/andy.png")
             virtualObject.setMaterialProperties(0.0f, 2.0f, 0.5f, 6.0f)
-
-            virtualObjectShadow.createOnGlThread(
-                context, "models/andy_shadow.obj", "models/andy_shadow.png")
-            virtualObjectShadow.setBlendMode(ObjectRenderer.BlendMode.Shadow)
-            virtualObjectShadow.setMaterialProperties(1.0f, 0.0f, 0.0f, 1.0f)
 
         } catch (e: IOException) {
             Log.e(TAG, "Failed to read an asset file", e)
@@ -148,9 +142,7 @@ class MainRenderer(
 
             // Update and draw the model and its shadow.
             virtualObject.updateModelMatrix(anchorMatrix, 0.1f)
-            virtualObjectShadow.updateModelMatrix(anchorMatrix, 0.1f)
             virtualObject.draw(viewmtx, projmtx, colorCorrectionRgba)
-            virtualObjectShadow.draw(viewmtx, projmtx, colorCorrectionRgba)
 
         } catch (t: Throwable) {
             // Avoid crashing the application due to unhandled exceptions.
