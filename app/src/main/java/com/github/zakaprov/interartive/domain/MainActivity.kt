@@ -9,6 +9,7 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.widget.Toast
 import com.github.zakaprov.interartive.R
+import com.github.zakaprov.interartive.extensions.getTopStackFragment
 import com.github.zakaprov.interartive.extensions.isPermissionGranted
 import com.github.zakaprov.interartive.renderers.MainRenderer
 import com.github.zakaprov.interartive.utils.DisplayRotationHelper
@@ -33,7 +34,7 @@ class MainActivity : AppCompatActivity(), ArCoreSessionListener {
     private val arCoreSession by lazy { Session(this) }
     private val rotationHelper by lazy { DisplayRotationHelper(this) }
     private val imageDb by lazy {
-        val inputStream = assets.open("reference.imgdb")
+        val inputStream = assets.open("arbuz.imgdb")
         AugmentedImageDatabase.deserialize(arCoreSession, inputStream)
     }
     private val tapHelper by lazy { SurfaceTapHelper(this) }
@@ -72,12 +73,26 @@ class MainActivity : AppCompatActivity(), ArCoreSessionListener {
         }
     }
 
+    override fun onBackPressed() {
+        val fragment = getTopStackFragment()
+        if (fragment != null) {
+            supportFragmentManager.popBackStack()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     override fun onSurfaceClicked(results: List<HitResult>) {
         for (hit in results) {
             // Check if any plane was hit, and if it was hit inside the plane polygon
             val trackable = hit.trackable
             if (trackable is AugmentedImage) {
                 Log.d(javaClass.simpleName, "Clicked on: ${trackable.name}")
+
+                supportFragmentManager.beginTransaction()
+                    .addToBackStack("DetailFragment")
+                    .add(R.id.main_fragment_container, DetailFragment.newInstance(trackable.name), "DetailFragment")
+                    .commit()
             }
         }
     }
