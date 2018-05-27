@@ -1,4 +1,4 @@
-package com.github.zakaprov.interartive.graphics
+package com.github.zakaprov.interartive.renderers
 
 import android.opengl.GLSurfaceView
 import android.util.Log
