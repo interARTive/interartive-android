@@ -147,8 +147,8 @@ class MainRenderer(
             }
 
             // Update and draw the model and its shadow.
-            virtualObject.updateModelMatrix(anchorMatrix, 1.0f)
-            virtualObjectShadow.updateModelMatrix(anchorMatrix, 1.0f)
+            virtualObject.updateModelMatrix(anchorMatrix, 0.1f)
+            virtualObjectShadow.updateModelMatrix(anchorMatrix, 0.1f)
             virtualObject.draw(viewmtx, projmtx, colorCorrectionRgba)
             virtualObjectShadow.draw(viewmtx, projmtx, colorCorrectionRgba)
 

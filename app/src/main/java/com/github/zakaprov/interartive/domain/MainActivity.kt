@@ -76,8 +76,8 @@ class MainActivity : AppCompatActivity(), ArCoreSessionListener {
         for (hit in results) {
             // Check if any plane was hit, and if it was hit inside the plane polygon
             val trackable = hit.trackable
-            if (trackable is Plane) {
-                Log.d(javaClass.simpleName, "${trackable.type}")
+            if (trackable is AugmentedImage) {
+                Log.d(javaClass.simpleName, "Clicked on: ${trackable.name}")
             }
         }
     }
