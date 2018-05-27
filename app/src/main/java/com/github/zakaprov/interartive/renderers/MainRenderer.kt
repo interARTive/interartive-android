@@ -8,10 +8,12 @@ import android.util.Log
 import com.github.zakaprov.interartive.domain.ArCoreSessionListener
 import com.github.zakaprov.interartive.utils.DisplayRotationHelper
 import com.github.zakaprov.interartive.utils.SurfaceTapHelper
+import com.google.ar.core.Anchor
 import com.google.ar.core.AugmentedImage
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import java.io.IOException
+import java.util.Date
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -23,11 +25,16 @@ class MainRenderer(
     private val rotationHelper: DisplayRotationHelper
 ) : GLSurfaceView.Renderer {
 
+    companion object {
+        private const val ANCHOR_LIFETIME_MS = 2_000
+    }
+
     private val backgroundRenderer = BackgroundRenderer()
     private val pointCloudRenderer = PointCloudRenderer()
     private val objectRenderer = ObjectRenderer()
 
     private val anchorMatrix = FloatArray(16)
+    private val anchorMap = HashMap<String, Pair<Anchor, Long>>()
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f)
@@ -128,17 +135,24 @@ class MainRenderer(
 
             for (image in images) {
                 if (image.trackingState == TrackingState.TRACKING) {
-                    val newAnchor = session.createAnchor(image.centerPose)
-                    newAnchor.pose.toMatrix(anchorMatrix, 0)
+                    anchorMap[image.name] = Pair(session.createAnchor(image.centerPose), Date().time)
                 }
             }
 
-            // Update and draw the model and its shadow.
-            objectRenderer.updateModelMatrix(anchorMatrix, 0.1f)
-            objectRenderer.draw(viewmtx, projmtx, colorCorrectionRgba)
+            for (name in anchorMap.keys) {
+                val entry = anchorMap[name] ?: continue
+                if (Date().time - entry.second >= ANCHOR_LIFETIME_MS) {
+                    anchorMap.remove(name)
+                }
+            }
+
+            for ((anchor, _) in anchorMap.values) {
+                anchor.pose.toMatrix(anchorMatrix, 0)
+                objectRenderer.updateModelMatrix(anchorMatrix, 0.1f)
+                objectRenderer.draw(viewmtx, projmtx, colorCorrectionRgba)
+            }
 
         } catch (t: Throwable) {
-            // Avoid crashing the application due to unhandled exceptions.
             Log.e(TAG, "Exception on the OpenGL thread", t)
         }
 
