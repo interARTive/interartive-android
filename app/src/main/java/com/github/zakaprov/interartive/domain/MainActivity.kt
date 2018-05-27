@@ -9,23 +9,22 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.widget.Toast
 import com.github.zakaprov.interartive.R
-import com.github.zakaprov.interartive.R.id.main_surface_view
 import com.github.zakaprov.interartive.extensions.isPermissionGranted
-import com.github.zakaprov.interartive.renderers.AugmentedImageRenderer
 import com.github.zakaprov.interartive.renderers.MainRenderer
 import com.github.zakaprov.interartive.utils.DisplayRotationHelper
 import com.github.zakaprov.interartive.utils.SurfaceTapHelper
+import com.google.ar.core.AugmentedImage
 import com.google.ar.core.AugmentedImageDatabase
 import com.google.ar.core.Config
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
-import com.google.ar.core.Point
 import com.google.ar.core.Session
+import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.CameraNotAvailableException
 import kotlinx.android.synthetic.main.activity_main.*
 
 
-class MainActivity : AppCompatActivity(), SurfaceClickListener {
+class MainActivity : AppCompatActivity(), ArCoreSessionListener {
 
     companion object {
         private const val CAMERA_PERMISSION_REQUEST = 127
@@ -33,7 +32,10 @@ class MainActivity : AppCompatActivity(), SurfaceClickListener {
 
     private val arCoreSession by lazy { Session(this) }
     private val rotationHelper by lazy { DisplayRotationHelper(this) }
-    private val imageDb by lazy { AugmentedImageDatabase(arCoreSession) }
+    private val imageDb by lazy {
+        val inputStream = assets.open("reference.imgdb")
+        AugmentedImageDatabase.deserialize(arCoreSession, inputStream)
+    }
     private val tapHelper by lazy { SurfaceTapHelper(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,6 +45,7 @@ class MainActivity : AppCompatActivity(), SurfaceClickListener {
         main_surface_view.setOnTouchListener(tapHelper)
 
 //        requestCameraPermission()
+
         setUpArCore()
     }
 
@@ -75,6 +78,14 @@ class MainActivity : AppCompatActivity(), SurfaceClickListener {
             val trackable = hit.trackable
             if (trackable is Plane) {
                 Log.d(javaClass.simpleName, "${trackable.type}")
+            }
+        }
+    }
+
+    override fun onAugmentedImagesFound(images: Collection<AugmentedImage>) {
+        for (image in images) {
+            if (image.trackingState == TrackingState.TRACKING) {
+                Log.d(javaClass.simpleName, "TRACKING: ${image.name} ${image.centerPose}")
             }
         }
     }

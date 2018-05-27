@@ -5,11 +5,11 @@ import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.util.Log
-import com.github.zakaprov.interartive.domain.SurfaceClickListener
+import com.github.zakaprov.interartive.domain.ArCoreSessionListener
 import com.github.zakaprov.interartive.utils.DisplayRotationHelper
 import com.github.zakaprov.interartive.utils.SurfaceTapHelper
+import com.google.ar.core.AugmentedImage
 import com.google.ar.core.Plane
-import com.google.ar.core.Point
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
 import java.io.IOException
@@ -19,7 +19,7 @@ import javax.microedition.khronos.opengles.GL10
 class MainRenderer(
     private val context: Context,
     private val session: Session,
-    private val surfaceListener: SurfaceClickListener,
+    private val arSessionListener: ArCoreSessionListener,
     private val tapHelper: SurfaceTapHelper,
     private val rotationHelper: DisplayRotationHelper
 ) : GLSurfaceView.Renderer {
@@ -29,6 +29,8 @@ class MainRenderer(
     private val planeRenderer = PlaneRenderer()
     private val virtualObject = ObjectRenderer()
     private val virtualObjectShadow = ObjectRenderer()
+
+    private val anchorMatrix = FloatArray(16)
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f)
@@ -71,11 +73,14 @@ class MainRenderer(
             val frame = session.update()
             val camera = frame.camera
 
+            val images = frame.getUpdatedTrackables(AugmentedImage::class.java)
+            arSessionListener.onAugmentedImagesFound(images)
+
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
             val tap = tapHelper.poll()
             if (tap != null && camera.trackingState == TrackingState.TRACKING) {
-                surfaceListener.onSurfaceClicked(frame.hitTest(tap))
+                arSessionListener.onSurfaceClicked(frame.hitTest(tap))
 //                for (hit in frame.hitTest(tap)) {
 //                    // Check if any plane was hit, and if it was hit inside the plane polygon
 //                    val trackable = hit.trackable
@@ -134,22 +139,18 @@ class MainRenderer(
             planeRenderer.drawPlanes(
                 session.getAllTrackables(Plane::class.java), camera.displayOrientedPose, projmtx)
 
-            // Visualize anchors created by touch.
-//            val scaleFactor = 1.0f
-//            for (anchor in anchors) {
-//                if (anchor.getTrackingState() != TrackingState.TRACKING) {
-//                    continue
-//                }
-//                // Get the current pose of an Anchor in world space. The Anchor pose is updated
-//                // during calls to session.update() as ARCore refines its estimate of the world.
-//                anchor.getPose().toMatrix(anchorMatrix, 0)
-//
-//                // Update and draw the model and its shadow.
-//                virtualObject.updateModelMatrix(anchorMatrix, scaleFactor)
-//                virtualObjectShadow.updateModelMatrix(anchorMatrix, scaleFactor)
-//                virtualObject.draw(viewmtx, projmtx, colorCorrectionRgba)
-//                virtualObjectShadow.draw(viewmtx, projmtx, colorCorrectionRgba)
-//            }
+            for (image in images) {
+                if (image.trackingState == TrackingState.TRACKING) {
+                    val newAnchor = session.createAnchor(image.centerPose)
+                    newAnchor.pose.toMatrix(anchorMatrix, 0)
+                }
+            }
+
+            // Update and draw the model and its shadow.
+            virtualObject.updateModelMatrix(anchorMatrix, 1.0f)
+            virtualObjectShadow.updateModelMatrix(anchorMatrix, 1.0f)
+            virtualObject.draw(viewmtx, projmtx, colorCorrectionRgba)
+            virtualObjectShadow.draw(viewmtx, projmtx, colorCorrectionRgba)
 
         } catch (t: Throwable) {
             // Avoid crashing the application due to unhandled exceptions.
